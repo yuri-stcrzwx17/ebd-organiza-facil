@@ -1,30 +1,181 @@
-import { Phone, BookOpen } from "lucide-react";
-import { teachers } from "@/data/mockData";
+import { useState } from "react";
+import { Phone, BookOpen, Plus, Search, Baby, GraduationCap, Users } from "lucide-react";
+import { format } from "date-fns";
+import { teachers as initialTeachers, Teacher, classes } from "@/data/mockData";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { CalendarIcon } from "lucide-react";
+import { toast } from "sonner";
 
-const Teachers = () => (
-  <div className="space-y-4 max-w-2xl mx-auto">
-    <p className="text-sm text-muted-foreground">Professores da EBD</p>
-    <div className="space-y-2">
-      {teachers.map((t, i) => (
-        <div
-          key={t.id}
-          className="bg-card border rounded-xl p-4 flex items-center gap-4 animate-fade-in"
-          style={{ animationDelay: `${i * 0.05}s` }}
-        >
-          <div className="h-11 w-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
-            {t.name.split(" ").map(n => n[0]).slice(0, 2).join("")}
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm text-foreground">{t.name}</h3>
-            <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-0.5">
-              <span className="flex items-center gap-1"><BookOpen className="h-3 w-3" />{t.class}</span>
-              <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{t.phone}</span>
-            </div>
-          </div>
+const classConfig: Record<string, { color: string; icon: React.ReactNode }> = {
+  Crianças: { color: "bg-amber-100 text-amber-800 border-amber-200", icon: <Baby className="h-3 w-3" /> },
+  Adolescentes: { color: "bg-sky-100 text-sky-800 border-sky-200", icon: <BookOpen className="h-3 w-3" /> },
+  Jovens: { color: "bg-emerald-100 text-emerald-800 border-emerald-200", icon: <GraduationCap className="h-3 w-3" /> },
+  Adultos: { color: "bg-violet-100 text-violet-800 border-violet-200", icon: <Users className="h-3 w-3" /> },
+};
+
+const Teachers = () => {
+  const [search, setSearch] = useState("");
+  const [teacherList, setTeacherList] = useState<Teacher[]>(initialTeachers);
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
+  const [birthDate, setBirthDate] = useState<Date>();
+
+  const filtered = teacherList.filter((t) =>
+    t.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleCreate = () => {
+    if (!name || !phone || !selectedClass || !birthDate) {
+      toast.error("Preencha todos os campos.");
+      return;
+    }
+    const newTeacher: Teacher = {
+      id: String(Date.now()),
+      name,
+      phone,
+      class: selectedClass,
+      birthDate: format(birthDate, "yyyy-MM-dd"),
+    };
+    setTeacherList((prev) => [newTeacher, ...prev]);
+    setName("");
+    setPhone("");
+    setSelectedClass("");
+    setBirthDate(undefined);
+    setOpen(false);
+    toast.success("Professor cadastrado com sucesso!");
+  };
+
+  return (
+    <div className="space-y-4 max-w-2xl mx-auto">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Buscar professor..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
         </div>
-      ))}
+        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setName(""); setPhone(""); setSelectedClass(""); setBirthDate(undefined); } }}>
+          <DialogTrigger asChild>
+            <Button size="icon" className="rounded-xl h-[42px] w-[42px] shrink-0">
+              <Plus className="h-5 w-5" />
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Novo Professor</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label htmlFor="teacher-name">Nome completo</Label>
+                <Input id="teacher-name" placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="teacher-phone">Telefone</Label>
+                <Input id="teacher-phone" placeholder="(00) 00000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Turma responsável</Label>
+                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione a turma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes.map((c) => (
+                      <SelectItem key={c.id} value={c.name}>
+                        <span className="flex items-center gap-2">
+                          {classConfig[c.name]?.icon}
+                          {c.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Data de Nascimento</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal", !birthDate && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {birthDate ? format(birthDate, "dd/MM/yyyy") : "Selecione a data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={birthDate}
+                      onSelect={setBirthDate}
+                      disabled={(date) => date > new Date()}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <Button className="w-full mt-2" onClick={handleCreate}>
+                Salvar Professor
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <div className="space-y-2">
+        {filtered.map((t, i) => {
+          const config = classConfig[t.class];
+          return (
+            <div
+              key={t.id}
+              className={cn("bg-card border rounded-xl p-4 animate-fade-in", config && "border-l-4")}
+              style={{ animationDelay: `${i * 0.05}s` }}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
+                    {t.name.split(" ").map(n => n[0]).slice(0, 2).join("")}
+                  </div>
+                  <h3 className="font-semibold text-sm text-foreground">{t.name}</h3>
+                </div>
+                {config ? (
+                  <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 border", config.color)}>
+                    {config.icon}
+                    {t.class}
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium">{t.class}</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-1 ml-14">
+                <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{t.phone}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default Teachers;
