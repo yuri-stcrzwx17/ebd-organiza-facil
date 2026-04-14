@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, BookOpen, Plus, Search, Baby, GraduationCap, Users } from "lucide-react";
+import { Phone, BookOpen, Plus, Search, Baby, GraduationCap, Users, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { teachers as initialTeachers, Teacher, classes } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -30,6 +34,8 @@ const Teachers = () => {
   const [search, setSearch] = useState("");
   const [teacherList, setTeacherList] = useState<Teacher[]>(initialTeachers);
   const [open, setOpen] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState<Teacher | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Teacher | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
@@ -39,25 +45,62 @@ const Teachers = () => {
     t.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCreate = () => {
-    if (!name || !phone || !selectedClass || !birthDate) {
-      toast.error("Preencha todos os campos.");
-      return;
-    }
-    const newTeacher: Teacher = {
-      id: String(Date.now()),
-      name,
-      phone,
-      class: selectedClass,
-      birthDate: format(birthDate, "yyyy-MM-dd"),
-    };
-    setTeacherList((prev) => [newTeacher, ...prev]);
+  const resetForm = () => {
     setName("");
     setPhone("");
     setSelectedClass("");
     setBirthDate(undefined);
+    setEditingTeacher(null);
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setOpen(true);
+  };
+
+  const openEdit = (t: Teacher) => {
+    setEditingTeacher(t);
+    setName(t.name);
+    setPhone(t.phone);
+    setSelectedClass(t.class);
+    setBirthDate(new Date(t.birthDate));
+    setOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!name || !phone || !selectedClass || !birthDate) {
+      toast.error("Preencha todos os campos.");
+      return;
+    }
+    if (editingTeacher) {
+      setTeacherList((prev) =>
+        prev.map((t) =>
+          t.id === editingTeacher.id
+            ? { ...t, name, phone, class: selectedClass, birthDate: format(birthDate, "yyyy-MM-dd") }
+            : t
+        )
+      );
+      toast.success("Professor atualizado com sucesso!");
+    } else {
+      const newTeacher: Teacher = {
+        id: String(Date.now()),
+        name,
+        phone,
+        class: selectedClass,
+        birthDate: format(birthDate, "yyyy-MM-dd"),
+      };
+      setTeacherList((prev) => [newTeacher, ...prev]);
+      toast.success("Professor cadastrado com sucesso!");
+    }
+    resetForm();
     setOpen(false);
-    toast.success("Professor cadastrado com sucesso!");
+  };
+
+  const handleDelete = () => {
+    if (!deleteTarget) return;
+    setTeacherList((prev) => prev.filter((t) => t.id !== deleteTarget.id));
+    toast.success("Professor removido com sucesso!");
+    setDeleteTarget(null);
   };
 
   return (
@@ -73,74 +116,90 @@ const Teachers = () => {
             className="w-full pl-10 pr-4 py-2.5 rounded-xl border bg-card text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setName(""); setPhone(""); setSelectedClass(""); setBirthDate(undefined); } }}>
-          <DialogTrigger asChild>
-            <Button size="icon" className="rounded-xl h-[42px] w-[42px] shrink-0">
-              <Plus className="h-5 w-5" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Novo Professor</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label htmlFor="teacher-name">Nome completo</Label>
-                <Input id="teacher-name" placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="teacher-phone">Telefone</Label>
-                <Input id="teacher-phone" placeholder="(00) 00000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Label>Turma responsável</Label>
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione a turma" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {classes.map((c) => (
-                      <SelectItem key={c.id} value={c.name}>
-                        <span className="flex items-center gap-2">
-                          {classConfig[c.name]?.icon}
-                          {c.name}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Data de Nascimento</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn("w-full justify-start text-left font-normal", !birthDate && "text-muted-foreground")}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {birthDate ? format(birthDate, "dd/MM/yyyy") : "Selecione a data"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={birthDate}
-                      onSelect={setBirthDate}
-                      disabled={(date) => date > new Date()}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Button className="w-full mt-2" onClick={handleCreate}>
-                Salvar Professor
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button size="icon" className="rounded-xl h-[42px] w-[42px] shrink-0" onClick={openCreate}>
+          <Plus className="h-5 w-5" />
+        </Button>
       </div>
+
+      <Dialog open={open} onOpenChange={(v) => { if (!v) resetForm(); setOpen(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{editingTeacher ? "Editar Professor" : "Novo Professor"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="teacher-name">Nome completo</Label>
+              <Input id="teacher-name" placeholder="Nome completo" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="teacher-phone">Telefone</Label>
+              <Input id="teacher-phone" placeholder="(00) 00000-0000" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Turma responsável</Label>
+              <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Selecione a turma" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classes.map((c) => (
+                    <SelectItem key={c.id} value={c.name}>
+                      <span className="flex items-center gap-2">
+                        {classConfig[c.name]?.icon}
+                        {c.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Data de Nascimento</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn("w-full justify-start text-left font-normal", !birthDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {birthDate ? format(birthDate, "dd/MM/yyyy") : "Selecione a data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={birthDate}
+                    onSelect={setBirthDate}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <Button className="w-full mt-2" onClick={handleSave}>
+              {editingTeacher ? "Salvar Alterações" : "Salvar Professor"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(v) => !v && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover professor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover <strong>{deleteTarget?.name}</strong>? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="space-y-2">
         {filtered.map((t, i) => {
@@ -158,14 +217,22 @@ const Teachers = () => {
                   </div>
                   <h3 className="font-semibold text-sm text-foreground">{t.name}</h3>
                 </div>
-                {config ? (
-                  <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 border", config.color)}>
-                    {config.icon}
-                    {t.class}
-                  </span>
-                ) : (
-                  <span className="text-[10px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium">{t.class}</span>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {config ? (
+                    <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium flex items-center gap-1 border", config.color)}>
+                      {config.icon}
+                      {t.class}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium">{t.class}</span>
+                  )}
+                  <button onClick={() => openEdit(t)} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+                    <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                  <button onClick={() => setDeleteTarget(t)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors">
+                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground mt-1 ml-14">
                 <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{t.phone}</span>
