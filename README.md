@@ -46,7 +46,7 @@ Este projeto foi desenvolvido com:
 git clone <SEU_REPOSITORIO_AQUI>
 
 
-cd ebd-gestao
+cd ebd-organiza-facil
 
 
 npm run dev
