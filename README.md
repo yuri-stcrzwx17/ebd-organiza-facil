@@ -45,10 +45,10 @@ Este projeto foi desenvolvido com:
 ````sh
 git clone <SEU_REPOSITORIO_AQUI>
 
-```sh
+
 cd ebd-gestao
 
-```sh
+
 npm run dev
 ````
 
