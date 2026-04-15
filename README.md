@@ -48,6 +48,7 @@ git clone <SEU_REPOSITORIO_AQUI>
 
 cd ebd-organiza-facil
 
+npm i
 
 npm run dev
 ````
