@@ -2,28 +2,43 @@ import { useState } from "react";
 import { Check, X, UserPlus, Minus } from "lucide-react";
 import { classes, students } from "@/data/mockData";
 
-type Status = 'present' | 'absent' | 'visitor' | 'enrolled';
+type Status = "present" | "absent" | "enrolled";
 
-const statusConfig: Record<Status, { label: string; icon: typeof Check; color: string }> = {
-  enrolled: { label: "Mat.", icon: Minus, color: "bg-muted text-muted-foreground" },
-  present: { label: "Pres.", icon: Check, color: "bg-success text-success-foreground" },
-  absent: { label: "Aus.", icon: X, color: "bg-destructive text-destructive-foreground" },
-  visitor: { label: "Visit.", icon: UserPlus, color: "bg-warning text-warning-foreground" },
+const statusConfig: Record<
+  Status,
+  { label: string; icon: typeof Check; color: string }
+> = {
+  enrolled: {
+    label: "Mat.",
+    icon: Minus,
+    color: "bg-muted text-muted-foreground",
+  },
+  present: {
+    label: "Pres.",
+    icon: Check,
+    color: "bg-success text-success-foreground",
+  },
+  absent: {
+    label: "Aus.",
+    icon: X,
+    color: "bg-destructive text-destructive-foreground",
+  },
 };
 
-const statusOrder: Status[] = ['enrolled', 'present', 'absent', 'visitor'];
+const statusOrder: Status[] = ["enrolled", "present", "absent"];
 
 const Attendance = () => {
   const [selectedClass, setSelectedClass] = useState(classes[0]?.id || "");
   const classStudents = students.filter(
-    (s) => s.class === classes.find((c) => c.id === selectedClass)?.name
+    (s) => s.class === classes.find((c) => c.id === selectedClass)?.name,
   );
 
   const [attendance, setAttendance] = useState<Record<string, Status>>({});
 
   const cycleStatus = (studentId: string) => {
     const current = attendance[studentId] || "enrolled";
-    const next = statusOrder[(statusOrder.indexOf(current) + 1) % statusOrder.length];
+    const next =
+      statusOrder[(statusOrder.indexOf(current) + 1) % statusOrder.length];
     setAttendance((prev) => ({ ...prev, [studentId]: next }));
   };
 
@@ -45,11 +60,15 @@ const Attendance = () => {
         ))}
       </div>
 
-      <p className="text-xs text-muted-foreground">Toque no status para alternar: Matriculado → Presente → Ausente → Visitante</p>
+      <p className="text-xs text-muted-foreground">
+        Toque no status para alternar: Matriculado → Presente → Ausente
+      </p>
 
       <div className="space-y-2">
         {classStudents.length === 0 && (
-          <p className="text-center text-muted-foreground py-8 text-sm">Nenhum aluno nesta turma</p>
+          <p className="text-center text-muted-foreground py-8 text-sm">
+            Nenhum aluno nesta turma
+          </p>
         )}
         {classStudents.map((s, i) => {
           const status = attendance[s.id] || "enrolled";
@@ -61,7 +80,9 @@ const Attendance = () => {
               className="bg-card border rounded-xl p-3 flex items-center justify-between animate-fade-in"
               style={{ animationDelay: `${i * 0.03}s` }}
             >
-              <span className="text-sm font-medium text-foreground">{s.name}</span>
+              <span className="text-sm font-medium text-foreground">
+                {s.name}
+              </span>
               <button
                 onClick={() => cycleStatus(s.id)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all active:scale-95 ${cfg.color}`}
